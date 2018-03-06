@@ -1,97 +1,110 @@
+/*Including libraries and the tree code I wrote. This has the same
+ * effect as taking all of the code in treeTest.c and putting it here.
+ * These included files MUST NOT HAVE MAIN FUNCTIONS!
+*/
 #include <sys/types.h>
 #include "treeTest.c"
 
-#define FILE_NAME "pt.txt"
+#define FILE_NAME "pt.txt"		//defining a constant for later use
 
+//function declarations (required)
 struct tree_node* makeNode(struct processedLine *pline, struct processedLine **entryList, int numLines);
-void forkAndSleep(struct tree_node* root);
+void forkAndSleep(struct tree_node* root, int fdPipe[]);
 
+//********************************************************************//
+//functions written here. main() is at the very bottom.
+
+/*function to make a tree node. See treeTest.c for pLine and entryList.
+ * numLines is obtained in the function read_tree_file (see below),
+ * where this function is used.
+*/
 struct tree_node* makeNode(struct processedLine *pline, struct processedLine **entryList, int numLines)
 {
+	//This is a recursive function
+	
 	//base case leaf node
-	
-	printf("%s\n", pline->name);
-	
-	if(pline->numChildren == 0)											//if this node has no children, it is a leaf node
+	if(pline->numChildren == 0)											//if this node has no children, then it is a leaf node
 	{
-		printf("got in if\n");
-		
-		struct tree_node *leaf = (struct tree_node *) calloc((size_t) 1, sizeof (struct tree_node));
-		
-		printf("calloced\n");
-		
+		//recall that a "\" character is for line continuation
+		struct tree_node *leaf = (struct tree_node *)\
+			calloc((size_t) 1, sizeof (struct tree_node));				//allocate memory for leaf node
+				
+		//set leaf members
 		leaf->children = NULL;
 		leaf->name = pline->name;
 		leaf->numChildren = 0;
-		printf("Finished constructing leafffffffff. Ready 2 preent?\n");
 		return leaf;
 	}
+	
+	//case: not a leaf node
 	else
 	{
 		int i,j;
-		struct tree_node *node = (struct tree_node *) calloc((size_t) 1, sizeof (struct tree_node));
+		struct tree_node *node = (struct tree_node *)\
+			calloc((size_t) 1, sizeof (struct tree_node));				//memory allocation for node
+			
+		//setting members of node
 		node->name = pline->name;
 		node->numChildren = pline->numChildren;
+		node->children = (struct tree_node **)\
+			calloc((size_t)pline->numChildren, sizeof(struct tree_node*));
 		
-		printf("got here 1 \n");
-		
-		node->children = (struct tree_node **) calloc((size_t) pline->numChildren, sizeof(struct tree_node*));
-		for(i = 0; i < node->numChildren; i++)
+		//Not the base case
+		for(i = 0; i < node->numChildren; i++)							//loop through all of the current node's children
 		{
-			printf("got here outer loop \n");
-			char *temppLineChildName = pline->childrenNames[i];
+			char *temppLineChildName = pline->childrenNames[i];			//temporary string to store current child name
 			struct processedLine *temppLine = NULL;
+			
 			//Search entryList for struct processedLine whose name matches childrenNames[i]
 			for(j = 0; j < numLines; j++)
 			{
-				printf("got here inner loop\n");
-				struct processedLine *currentProcessedLine = entryList[j];
-				printf("got here currentProcessedLine \n");
-				printf("got here numLines = %d \n", numLines);
-				printf("currentProcessedLine->numChildren = %d \n", j);
-				char *tempName = currentProcessedLine->name;
-				printf("got here tempName \n");
-				
-				printf("tempName: %s\ntemppLineChildName: %s\n", tempName, temppLineChildName);
-				
+				struct processedLine *currentProcessedLine = entryList[j];	//recall that entryList holds an array of all the processed lines
+				char *tempName = currentProcessedLine->name;	
+
 				if(strcmp(tempName,temppLineChildName) == 0)
 				{
-					printf("got here if strcmp \n");
 					temppLine = currentProcessedLine;
-					printf("got here break \n");
 					break;
 				}
+				
 			}
-			printf("got out of loop \n");
 			node->children[i] = makeNode(temppLine, entryList, numLines);
-			printf("%s\n", node->children[i]);
 			
 		}
 		return node;
 	}
 }
-
-void print_tree(struct tree_node* root)//output format needs to be fixed later
+//NOTE: You must print a newline character manually after using this function.
+//	print_tree does not print a newline after its output.
+void print_tree(struct tree_node* root)
 {
+	//case: leaf node
 	if(root->numChildren == 0)
 	{
-		printf("%s\t", root->name);
+		printf("%s,", root->name);
 		return;
 	}
+	//case: not a leaf node
 	else
 	{
-		int i;
-		printf("%s\n", root->name);
-		for(i = 0; i < root->numChildren; i++)
+		int i = 0;
+		printf("%s(", root->name);
+		//for(i = 0; i < root->numChildren; i++)
+		do
 		{
 			struct tree_node *currentChild = root->children[i];
 			print_tree(currentChild);
+			i++;
+			if(i == root->numChildren)
+			{
+				printf(")");
+			}
 		}
+		while(i < root->numChildren);
 	}
-	//printf("\n");
 }
 
-void read_tree_file(const char *filename)
+struct tree_node* read_tree_file(const char *filename)
 {
 	//Setup
 	int numLines = 0;
@@ -101,12 +114,12 @@ void read_tree_file(const char *filename)
 	FILE *fp = fopen(FILE_NAME, "r");									//Open tree file
 	
 	
-	while(fscanf(fp, "%c", &current) != EOF)								//Loop until end of file; fscanf reads the file
-																			//	according to a specified format
-	{
-		if(current == '\n')													//Keep newline characters and spaces out of array
+	while(fscanf(fp, "%c", &current) != EOF)							//Loop until end of file; fscanf reads the file
+	{																	//	according to a specified format
+	
+		if(current == '\n')												//Keep newline characters and spaces out of array
 		{
-			numLines++;
+			numLines++;													//count newlines to count number of nodes
 			continue;
 		}
 		else if(current == ' ')
@@ -115,79 +128,106 @@ void read_tree_file(const char *filename)
 		}
 		else
 		{
-			entryList[i] = current;											//Place current character being looked at in file into
-																			//	character array entryList
+			entryList[i] = current;										//Place current character being looked at into
+																		//	character array entryList
 			i++;
 		}
 	}
-	numLines -= 1;		//This holds if the file ends with a newline character
-	//this ** returns an array of (struct processedLine*)'s, NOT a pointer to them
-	struct processedLine ** treeLine = processLines(entryList, numLines);
-	printf("%s\n", entryList);
-	struct tree_node* parentNode = makeNode(treeLine[0], treeLine, numLines);
-	forkAndSleep(parentNode);
+	numLines -= 1;														//This is needed if the file ends with a newline character
+	
+	struct processedLine ** treeLine = processLines(entryList, numLines);	//treeLine is an array of processedLines
+	
+	for(i = 0; i < numLines; i++)
+	{
+		struct processedLine* treeCurrentLine = treeLine[i];
+	}
+	
+	struct tree_node* parentNode = makeNode(treeLine[0], treeLine, numLines);	/*	parentNode is the very first node in the file with 
+																				 *	an entryList of all its children. The number of
+																				 *	children that the parent has is the same as the
+																				 *	number of lines in the file, excluding the first
+																				*/
+	int* fdPipe = (int*) calloc((size_t) 2, sizeof(int));
+	forkAndSleep(parentNode, fdPipe);
 	print_tree(parentNode);
+	printf("\n");
 
-	return;
+	return parentNode;
 }
 
-void forkAndSleep(struct tree_node* root)
+//forkAndSleep is a recursive function
+void forkAndSleep(struct tree_node* root, int fdPipe[])
 {
+	int i;
 	if(root->numChildren == 0)
+	//this is a last child node (at the bottom of the tree)
 	{
-		sleep(1);
+		struct tree_node* currentChild = root->children[i];
+		char* buf = (char*) calloc((size_t) 50, sizeof(char*));
+		write(fdPipe[1], buf, 50);
+		sleep(.1);
 	}
 	else
 	{
-		int i;
-		for(i = 0; i < root->numChildren; i++)
+		int sk;
+		int ** arrFd = calloc((size_t) root->numChildren, sizeof(int*));
+		
+		for(sk = 0; sk < root->numChildren; sk++)
+			{
+				int temp[2] = {0, 0};
+				arrFd[sk] = (int*) &temp;
+			}
+			
+
+		for(i = 0; i < root->numChildren; i++) 							//loop goes through all children of current node
 		{
 			struct tree_node* currentChild = root->children[i];
+			
+			pipe(arrFd[i]);												//pipes for children
+			
+			if(pipe(arrFd[i]) < 0)
+			{
+				printf("Error piping\n");
+				exit(0);
+			}
+			close(arrFd[i][0]);
+			
 			pid_t pid = fork();
+			
 			if(pid < (pid_t) 0)
 			{
 				printf("Fork failed\n");
 			}
 			else if(pid == (pid_t) 0)	//Child process
 			{
-				printf("Child process pid: %d\n", getpid());
-				forkAndSleep(currentChild);
+				char *buf = (char*) calloc((size_t) 50, sizeof(char));
+				write(arrFd[i][1], &buf, 50);
+				forkAndSleep(currentChild, arrFd[i]);
 			}
 			else 						//Parent process
 			{
-				printf("This is the parent process with pid: %d\n", getpid());
+				/*since the first child that the parent forks will recursively
+				 * fork until it gets to the last child, the parent will
+				 * wait until all the children are done
+				*/
+				char *buf = (char *) calloc((size_t) 50, sizeof(char));
+				read(arrFd[i][0], &buf, 50);
 				wait(NULL);
-				printf("%s\n", currentChild->name);
 			}
 		}
 	}
 }
 
-int main()	//allow input from command line later
+int getChildPids(struct tree_node* child)
 {
-	read_tree_file(FILE_NAME);
-	return 0;
+	
 }
 
-//Go through array elements	BACKWARDS (to do recursively)...
-	
-	//nodeCount = number of nodes specified by a number.
-	//	This value will be used to determine how to read the next
-	//	number of elements in the array
-	
-	//KEEP IN MIND THIS MUST BE RECURSIVE
-	
-	//Consider putting a number at the beginning of the file,
-	//	specifying the number of nodes in the tree so that you can abort
-	//	if too large
-	
-	//Let letter mean any character that is not a number (since node names can be anything)
-	//if element is a letter and nodeCount == 0
-	//	This is the current node being looked at
-	//else if element is a number
-	//	if the number != 0
-	//		This is the number of children to read for the current node
-	//	else the number == 0
-	//		This is the last child node in the branch. Call sleep()
-	//else if element is a letter and nodeCount > 0
-	// The element is a child of the first element in the line
+int main()	//allow input from command line later
+{
+	struct tree_node* parentNode;
+	printf("\n");
+	parentNode = read_tree_file(FILE_NAME);
+	printf("\n\nparentNode: %s\n", parentNode->name);
+	return 0;
+}
