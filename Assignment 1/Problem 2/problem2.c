@@ -9,7 +9,7 @@
 
 //function declarations (required)
 struct tree_node* makeNode(struct processedLine *pline, struct processedLine **entryList, int numLines);
-void forkAndSleep(struct tree_node* root, int fdPipe[]);
+pid_t* forkAndSleep(struct tree_node* root, int fdPipe[]);
 
 //********************************************************************//
 //functions written here. main() is at the very bottom.
@@ -89,7 +89,6 @@ void print_tree(struct tree_node* root)
 	{
 		int i = 0;
 		printf("%s(", root->name);
-		//for(i = 0; i < root->numChildren; i++)
 		do
 		{
 			struct tree_node *currentChild = root->children[i];
@@ -148,7 +147,8 @@ struct tree_node* read_tree_file(const char *filename)
 																				 *	number of lines in the file, excluding the first
 																				*/
 	int* fdPipe = (int*) calloc((size_t) 2, sizeof(int));
-	forkAndSleep(parentNode, fdPipe);
+	pid_t* pidArr = (pid_t*) calloc((size_t) parentNode->numChildren, sizeof(pid_t*));
+	pidArr = forkAndSleep(parentNode, fdPipe);
 	print_tree(parentNode);
 	printf("\n");
 
@@ -156,11 +156,12 @@ struct tree_node* read_tree_file(const char *filename)
 }
 
 //forkAndSleep is a recursive function
-void forkAndSleep(struct tree_node* root, int fdPipe[])
+pid_t* forkAndSleep(struct tree_node* root, int fdPipe[])
 {
 	int i;
-	if(root->numChildren == 0)
-	//this is a last child node (at the bottom of the tree)
+pid_t* pidArr = (pid_t*) calloc((size_t) root->numChildren, sizeof(pid_t*));
+	
+	if(root->numChildren == 0) 											//this is a last child node (at the bottom of the tree)
 	{
 		struct tree_node* currentChild = root->children[i];
 		char* buf = (char*) calloc((size_t) 50, sizeof(char*));
@@ -175,6 +176,7 @@ void forkAndSleep(struct tree_node* root, int fdPipe[])
 		for(sk = 0; sk < root->numChildren; sk++)
 			{
 				int temp[2] = {0, 0};
+				int pidTemp[2] = {0,0};
 				arrFd[sk] = (int*) &temp;
 			}
 			
@@ -183,9 +185,8 @@ void forkAndSleep(struct tree_node* root, int fdPipe[])
 		{
 			struct tree_node* currentChild = root->children[i];
 			
-			pipe(arrFd[i]);												//pipes for children
-			
-			if(pipe(arrFd[i]) < 0)
+			pipe(arrFd[i]);												//pipes for children			
+			if(pipe(arrFd[i]) < 0 /*|| pipe(pidFd[i]) < 0*/)
 			{
 				printf("Error piping\n");
 				exit(0);
@@ -193,6 +194,7 @@ void forkAndSleep(struct tree_node* root, int fdPipe[])
 			close(arrFd[i][0]);
 			
 			pid_t pid = fork();
+			pidArr[i] = pid;
 			
 			if(pid < (pid_t) 0)
 			{
@@ -200,9 +202,11 @@ void forkAndSleep(struct tree_node* root, int fdPipe[])
 			}
 			else if(pid == (pid_t) 0)	//Child process
 			{
-				char *buf = (char*) calloc((size_t) 50, sizeof(char));
+				char *buf = (char*) calloc((size_t) 50, sizeof(char));				
+				printf("Child process pid: %d\n", (int) getpid());
+
 				write(arrFd[i][1], &buf, 50);
-				forkAndSleep(currentChild, arrFd[i]);
+				forkAndSleep(currentChild, arrFd[i]);									//changed this
 			}
 			else 						//Parent process
 			{
@@ -216,11 +220,9 @@ void forkAndSleep(struct tree_node* root, int fdPipe[])
 			}
 		}
 	}
-}
-
-int getChildPids(struct tree_node* child)
-{
-	
+//printf("pidArr[0]: %d\n", (int) pidArr[0]);
+//printf("pidArr[1]: %d\n", (int) pidArr[1]);
+return pidArr;
 }
 
 int main()	//allow input from command line later
