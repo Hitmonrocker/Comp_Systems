@@ -1,0 +1,7 @@
+Questions Problem 1:
+
+1) If the parent is prematurely killed before the forks nothing prints as expected. If the parent is killed by a child prematurely, the parent does not print, but the children continue to run. I assume they are later reaped by the INIT process.
+
+2) If you use getppid() on the parent function it returns another PID which I assumet to be a mother process that stems like init.
+
+3) The maximum amount of Processes I have created on my system is 4194303. This is the amount of uninque PID's there are
