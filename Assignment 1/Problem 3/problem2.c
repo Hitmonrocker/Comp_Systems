@@ -4,7 +4,6 @@
 */
 #include <sys/types.h>
 #include "treeTest.c"
-//#include "problem3.c"
 #include <sys/wait.h>
 #define FILE_NAME "pt.txt"		//defining a constant for later use
 
@@ -217,7 +216,7 @@ pid_t* pidArr = (pid_t*) calloc((size_t) root->numChildren, sizeof(pid_t*));
 				*/
 				char *buf = (char *) calloc((size_t) 50, sizeof(char));
 				read(arrFd[i][0], &buf, 50);
-				kill(pid, SIGUSR1);
+				kill(pid, SIGUSR1);//kills the child and sends it the custom SIGUSR1 signal to trigger our wait_for_child function
 			}
 		}
 	}
@@ -225,16 +224,3 @@ pid_t* pidArr = (pid_t*) calloc((size_t) root->numChildren, sizeof(pid_t*));
 //printf("pidArr[1]: %d\n", (int) pidArr[1]);
 return pidArr;
 }
-
-/*int main()	//allow input from command line later
-{
-	int status;
-	signal(SIGCONT, sigCont_Handler);
-	signal(SIGUSR1, sigUSR_Handler);
-
-	struct tree_node* parentNode;
-	printf("\n");
-	parentNode = read_tree_file(FILE_NAME);
-	printf("\n\nparentNode: %s\n", parentNode->name);
-	return 0;
-}*/
