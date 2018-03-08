@@ -4,5 +4,5 @@ CFLAGS= -lm
 %.o: %.c $(DEPS)
 	$(CC) -c -o $@ $< $(CFLAGS)
 
-Problem2: Problem2.o
-	gcc -o Problem2 Problem2.o -lm
+Problem1: Problem1.o
+	gcc -o Problem1 Problem1.o -lm
