@@ -1,0 +1,7 @@
+Text file format for number tree:
+
+Two blocks separated by the word "foo"
+
+First block is the actual math tree. The first entry of a line is the current node for the tree. The second and third entries of a line are the left and right child nodes, respectively. If the left child of the current node is a * or +, then the next line is the left child of the previous line's current node. This continues until the left child is a number. The next line is the right child node of the last right child that was not specified before. This continues until we get back to the last unspecified right child.
+
+Second block indicates the line numbers which correspond to the children of the previous tree. The first number of each line is the current node line number. The second number of the line is the line number (in the previous block) to look at for the left child. The third number of the line is the line number (in the previous block) to look at for the right child. x indicates NULL.
