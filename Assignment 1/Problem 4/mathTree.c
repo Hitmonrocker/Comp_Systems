@@ -378,24 +378,78 @@ void print_tree(struct treeNode *root) {
 int calculateTree(struct treeNode *root)
 {
 	int result;
+	int fdPipe[2];
+	pid_t pid;
+	/*
 	printf("%s\n", root->name);
 	printf("strcmp to *: %d\n", strcmp(root->name, "*"));
 	printf("strcmp to +: %d\n", strcmp(root->name, "+"));
+	* */
+	
 	if (root->leftChild == NULL && root->rightChild == NULL)
 	{
 		result = atoi(root->name);
+		close(fdPipe[0]);
+		write(fdPipe[1], &result, sizeof(result));
+		close(fdPipe[1]);
+//printf("result: %d\n", result);
 		return result;
 	}
 	else if(root->name[0] == '*')
 	{
-		printf("got here *\n");
-		return (calculateTree(root->leftChild) * calculateTree(root->rightChild));
+		int left = 0;
+		int right = 0;
+		pid = fork();
+//printf("got here *\n");
+		if(pid == 0) //child
+		{
+			left = calculateTree(root->rightChild);
+			right = calculateTree(root->rightChild);
+			result = left * right;
+			
+			close(fdPipe[0]);
+			write(fdPipe[1], &result, sizeof(right));
+			close(fdPipe[1]);
+		}
+		else //parent
+		{
+			left = calculateTree(root->leftChild);
+			right = calculateTree(root->rightChild);
+			close(fdPipe[1]);
+			read(fdPipe[0], &right, sizeof(right));
+			wait();
+			result = left * right;
+		}
+		return result; //may be multiplying by zero here
 	}
 	//root->name = + case
 	else
 	{
-		printf("got here +\n");
-		return (calculateTree(root->leftChild) + calculateTree(root->rightChild));
+		int left = 0;
+		int right = 0;
+		pid = fork();
+//printf("got here *\n");
+		if(pid == 0) //child
+		{
+			left = calculateTree(root->rightChild);
+			right = calculateTree(root->rightChild);
+			result = left + right;
+			
+			close(fdPipe[0]);
+			write(fdPipe[1], &result, sizeof(right));
+			close(fdPipe[1]);
+		}
+		else //parent
+		{
+			left = calculateTree(root->leftChild);
+			right = calculateTree(root->rightChild);
+			close(fdPipe[1]);
+			read(fdPipe[0], &right, sizeof(right));
+			wait();
+			result = left + right;
+		}
+		
+		return result; //may be multiplying by zero here
 	}
 	
 }
