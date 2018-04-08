@@ -1,0 +1,28 @@
+//6a
+monitor procMon{
+	int n; //upper limit of processes
+	bool check = true; //bool to lock out extra processes
+	int totSum = 0; //int to keep track of sum of numbers processes input
+
+	void fileAcc(int x){
+		while(check){ //as long as check is true the process accesses the file
+			printf("Proccess has accessed the file. \n");
+			totSum+=x; //add x to the summation of process numbers
+			if(totSum> n){ //if the summation is greater than n check is set to false to lock other processes past n
+				check = false;
+				wait(pid); //puts the current process to sleep if check becomes false
+			}
+		}
+	}
+	void end(int x){//function to reset the lock after the process ends
+		totSum -= x;
+		check = true;
+	}
+
+}
+
+//b
+No matter what the signaling process does, either continuing its own execution or transferring control to the signalled process, the monitor should work about the same.  
+However, if it switches control to the signalled process the risk is run of waking the signalled process before there is enough memory on the stack to run it.
+Or a new process might access the file system before the current one exits.  This renders the monitor somewhat obsolete as mutual exclusion isn't guaranteed.  
+
