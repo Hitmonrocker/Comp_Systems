@@ -1,0 +1,74 @@
+Part 1
+	Assuming that all of the code runs, three signals are sent.
+SIGSEGV, SIGSTOP and SIGINT are generated in the main() block of code
+by the original "parent" thread. The signals are delivered
+to the child threads. Specifically, SIGSEGV is sent to thread 1,
+SIGSTOP is sent to thread 2 and SIGINT is sent to threads 1 and
+3.
+	Without assuming that all of the code runs, or in other words,
+we leave the code as it is, and also assuming that tid1 executes
+function func before tid2 or tid3, tid1 will acquire the lock in func
+first. This will allow tid1 to sleep and listen for SIGINT, locking
+out tid2 and tid3 for 50 seconds. If SIGINT is not caught in that
+time, then tid1 dies and the lock remains locked indefinitely.
+	If tid2 executes func before tid1 and tid3, then tid2 will acquire
+the lock in func first. This will allow tid2 to sleep and listen for
+signals SIGINT, SIGSEGV and SIGSTOP while locking out tid1 and tid3.
+If SIGINT is caught within 50 seconds, it is ignored. If either of
+the other two signals are caught within 50 seconds, then tid2 runs
+sig_func(). Otherwise, the lock remains locked indefinitely.
+	If tid3 executes func before tid1 and tid2, then tid3 will
+acquire the lock in func first. tid3 will then sleep for 50 seconds,
+listening for signals. The first time that SIGINT is received,
+the SIG_IGN handler runs and the signal is ignored. The second
+time SIGINT is received, sig_func2 runs. The remaining signals
+need only be received for the first time. If SIGSEGV, SIGSTOP or
+SIGFPE is received, then this thread will run sig_func. If
+SIGALRM is received, then this thread will run sig_func2.
+
+Part 2
+	At line A, a SIGSEGV signal is sent to thread tid1. This signal
+is generated and sent by the "parent" thread and delivered to
+thread tid1. tid1 handles this signal by ignoring it. This is the only
+possibility.
+	At line B, a SIGSTOP signal is sent to thread tid2. This signal
+is generated and sent by the "parent" thread and delivered to
+thread tid2. tid2 handles this signal by running sig_func(). This is
+the only possibility.
+	At line C (1), an alarm is set up to go off in 3 seconds. When
+this alarm goes off, a SIGALRM signal will be raised. Thread tid3 is 
+listening for this alarm, so it will run sig_func2, setting alrmflag 
+to 1.
+	At line C (2), the current process sleeps until alrmflag is
+set to 1 in sig_func2. Since this happens after the alarm in Line C
+(1) goes off, the program breaks out of the while loop and moves on.
+	At line D, a SIGINT signal is sent to thread tid1. Since this is 
+the first SIGINT signal that tid1 receives, the signal is ignored 
+by tid1.
+	At line E, another SIGINT signal is sent by the "parent" thread, 
+but this time it is  sent to thread tid3. Since all of these threads 
+share the same memory space, tid3 is no longer listening for SIGINT 
+at the first time signal(SIGINT, handler) is called, where handler is 
+the function handler. Therefore, when tid3 receives a SIGINT, the 
+thread runs sig_func2.
+
+Part 3
+	Assuming that the first signal to be sent five times is SIGINT, 
+the first time that SIGINT is raised, it will be caught by the 
+first call to signal(), which will ignore it. The second time 
+SIGINT is raised, the signal will be handled by thread tid3, 
+which will run function sig_func2(). In sig_func2(), alrmflag 
+will be set to 1. Additionally, since a signal was caught and the 
+signal-catching function returns, the process will stop pausing 
+in the while loop in the main function. As alrmflag is now 1, the 
+process will break out of the while loop and move on to the rest 
+of the code.
+	For all other signals other than SIGALRM, the while loop will 
+continue running. The only times that the program will break out 
+of the while loop are when SIGINT is raised twice or SIGALRM is 
+raised. If SIGALRM is raised, then the same events will transpire 
+as the events for the second time that SIGINT is raised. However, 
+SIGALRM would only be raised by alarm(3), which would have to 
+wait for 3 seconds before raising the signal. The remaining signals 
+would get the program past the pause() function, unpausing the 
+program only to return to the while loop and pause again.
