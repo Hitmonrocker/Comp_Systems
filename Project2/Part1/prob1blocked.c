@@ -11,7 +11,7 @@
 
 static int p;
 int mms(int* s, int i, int size);
-sigset_t x;
+sigset_t x;//declaring a sigset pointer for the proc mask
 sigUSR1_Handler(int signum){
   printf("\n\nReceived signal SIGUSR1 used for process determination.\n");
   p = signum;
@@ -54,17 +54,17 @@ void sigABRT_Handler(int signum){
 int main(int argc, char const *argv[])
 {
 
-    sigemptyset(&x);
-    sigaddset(&x, SIGABRT);
+    sigemptyset(&x);//initializing an empty set of signals to be blocked
+    sigaddset(&x, SIGABRT);//adding signal to set
     sigaddset(&x, SIGTERM);
     sigaddset(&x, SIGINT);
     sigaddset(&x, SIGKILL);
     sigaddset(&x, SIGQUIT);
     sigaddset(&x, SIGSTOP);
-    sigprocmask(SIG_BLOCK, &x, NULL);
+    sigprocmask(SIG_BLOCK, &x, NULL);//the actual block mask, if something is in x than it is blocked
     time_t t1, t2;
     FILE* FP;
-    signal(SIGUSR1, sigUSR1_Handler);
+    signal(SIGUSR1, sigUSR1_Handler);//assigning signals to the custom handlers 
     signal(SIGUSR2, sigUSR2_Handler);
     signal(SIGCONT, sigCONT_Handler);
     signal(SIGKILL, sigKILL_Handler);
